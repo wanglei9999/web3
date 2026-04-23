@@ -34,6 +34,8 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     AggregatorV3Interface public ethUsdPriceFeed;
     mapping(address => AggregatorV3Interface) public tokenUsdPriceFeeds;
 
+    bool private _reentrancyGuard;
+
     event AuctionCreated(
         uint256 indexed auctionId,
         address indexed seller,
@@ -64,9 +66,17 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address indexed seller
     );
 
+    modifier nonReentrant() {
+        require(!_reentrancyGuard, "ReentrancyGuard: reentrant call");
+        _reentrancyGuard = true;
+        _;
+        _reentrancyGuard = false;
+    }
+
     function initialize(address _ethUsdPriceFeed) public initializer {
         __Ownable_init();
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
+        _reentrancyGuard = false;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -121,7 +131,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         emit AuctionCreated(auctionId, msg.sender, nftContract, tokenId, startingPrice, startTime, endTime, paymentToken, isETH);
     }
 
-    function bidAuction(uint256 auctionId) public payable {
+    function bidAuction(uint256 auctionId) public payable nonReentrant {
         Auction storage auction = auctionData[auctionId];
         require(auction.isActive, "Auction not active");
         require(block.timestamp >= auction.startTime, "Auction not started");
@@ -133,7 +143,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         require(msg.value > minBid, "Bid too low");
 
         if (auction.highestBidder != address(0)) {
-            payable(auction.highestBidder).transfer(auction.highestBid);
+            _safeTransferETH(auction.highestBidder, auction.highestBid);
         }
 
         auction.highestBidder = msg.sender;
@@ -142,7 +152,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         emit BidPlaced(auctionId, msg.sender, msg.value, true);
     }
 
-    function bidAuctionERC20(uint256 auctionId, uint256 amount) public {
+    function bidAuctionERC20(uint256 auctionId, uint256 amount) public nonReentrant {
         Auction storage auction = auctionData[auctionId];
         require(auction.isActive, "Auction not active");
         require(block.timestamp >= auction.startTime, "Auction not started");
@@ -169,7 +179,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         emit BidPlaced(auctionId, msg.sender, amount, false);
     }
 
-    function endAuction(uint256 auctionId) public {
+    function endAuction(uint256 auctionId) public nonReentrant {
         Auction storage auction = auctionData[auctionId];
         require(auction.isActive, "Auction not active");
         require(block.timestamp >= auction.endTime, "Auction not ended");
@@ -181,7 +191,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             nft.transferFrom(address(this), auction.highestBidder, auction.tokenId);
 
             if (auction.isETH) {
-                payable(auction.seller).transfer(auction.highestBid);
+                _safeTransferETH(auction.seller, auction.highestBid);
             } else {
                 IERC20 token = IERC20(auction.paymentToken);
                 token.safeTransfer(auction.seller, auction.highestBid);
@@ -210,6 +220,11 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         nftToken2AuctionId[auction.nftContract][auction.tokenId] = 0;
 
         emit AuctionCancelled(auctionId, auction.seller);
+    }
+
+    function _safeTransferETH(address to, uint256 amount) internal {
+        (bool success, ) = to.call{value: amount}("");
+        require(success, "ETH transfer failed");
     }
 
     function getLatestETHPrice() public view returns (int256) {

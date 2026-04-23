@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MyERC20 is ERC20, Ownable {
+contract MyERC20 is ERC20, Ownable(msg.sender) {
     constructor() ERC20("MyToken", "MTK") {
         _mint(msg.sender, 1000000 * 10 ** decimals());
     }
