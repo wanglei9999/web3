@@ -1,4 +1,5 @@
-require("@nomicfoundation/hardhat-toolbox-viem");
+require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-waffle");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 import { HardhatUserConfig } from "hardhat/config";

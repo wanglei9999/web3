@@ -28,6 +28,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     uint256 public auctionCounter;
+    uint256 public version;
     mapping(address => mapping(uint256 => uint256)) public nftToken2AuctionId;
     mapping(uint256 => Auction) public auctionData;
     mapping(address => mapping(uint256 => bool)) public nftHasActiveAuction;
@@ -79,6 +80,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         _reentrancyGuard = false;
         auctionCounter = 1;
+        version = 1;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

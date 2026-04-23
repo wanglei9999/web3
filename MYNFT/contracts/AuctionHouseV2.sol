@@ -28,6 +28,7 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     uint256 public auctionCounter;
+    uint256 public version;
     mapping(address => mapping(uint256 => uint256)) public nftToken2AuctionId;
     mapping(uint256 => Auction) public auctionData;
     mapping(address => mapping(uint256 => bool)) public nftHasActiveAuction;
@@ -36,7 +37,6 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(address => AggregatorV3Interface) public tokenUsdPriceFeeds;
 
     bool private _reentrancyGuard;
-    uint256 public version;
 
     event AuctionCreated(
         uint256 indexed auctionId,
@@ -76,17 +76,17 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function initialize(address _ethUsdPriceFeed) public initializer {
-        __Ownable_init();
+         __Ownable_init();
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
-        version = 2;
         _reentrancyGuard = false;
         auctionCounter = 1;
+        version = 1;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function initializeV2() public onlyOwner {
-        require(version == 0, "Already initialized");
+        require(version == 1, "Already initialized");
         version = 2;
     }
 
