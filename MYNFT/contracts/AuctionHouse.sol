@@ -27,9 +27,10 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bool isETH;
     }
 
-    uint256 public auctionCounter = 1;
+    uint256 public auctionCounter;
     mapping(address => mapping(uint256 => uint256)) public nftToken2AuctionId;
     mapping(uint256 => Auction) public auctionData;
+    mapping(address => mapping(uint256 => bool)) public nftHasActiveAuction;
 
     AggregatorV3Interface public ethUsdPriceFeed;
     mapping(address => AggregatorV3Interface) public tokenUsdPriceFeeds;
@@ -77,6 +78,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         __Ownable_init();
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         _reentrancyGuard = false;
+        auctionCounter = 0;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -100,7 +102,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
                 nft.getApproved(tokenId) == address(this), "AuctionHouse not approved");
         require(startingPrice > 0, "Starting price must be positive");
         require(duration > 0, "Duration must be positive");
-        require(nftToken2AuctionId[nftContract][tokenId] == 0, "NFT already has an active auction");
+        require(!nftHasActiveAuction[nftContract][tokenId], "NFT already has an active auction");
 
         uint256 auctionId = auctionCounter++;
         uint256 endTime = startTime + duration;
@@ -125,6 +127,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         });
 
         nftToken2AuctionId[nftContract][tokenId] = auctionId;
+        nftHasActiveAuction[nftContract][tokenId] = true;
 
         nft.transferFrom(msg.sender, address(this), tokenId);
 
@@ -202,6 +205,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
 
         nftToken2AuctionId[auction.nftContract][auction.tokenId] = 0;
+        nftHasActiveAuction[auction.nftContract][auction.tokenId] = false;
 
         emit AuctionEnded(auctionId, auction.highestBidder, auction.highestBid);
     }
@@ -218,6 +222,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         nft.transferFrom(address(this), auction.seller, auction.tokenId);
 
         nftToken2AuctionId[auction.nftContract][auction.tokenId] = 0;
+        nftHasActiveAuction[auction.nftContract][auction.tokenId] = false;
 
         emit AuctionCancelled(auctionId, auction.seller);
     }
