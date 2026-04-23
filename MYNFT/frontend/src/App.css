@@ -169,6 +169,23 @@ body {
   font-size: 14px;
 }
 
+.success.token-id {
+  background-color: #d4edda;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.success.token-id span {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.success.token-id p {
+  margin-top: 10px;
+  font-size: 16px;
+}
+
 button[type="submit"] {
   width: 100%;
   padding: 10px;
@@ -188,6 +205,62 @@ button[type="submit"]:hover {
 button[type="submit"]:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
+}
+
+/* 按钮组 */
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.button-group button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.button-group button:first-child {
+  background-color: #28a745;
+  color: white;
+}
+
+.button-group button:first-child:hover {
+  background-color: #218838;
+}
+
+.button-group button:last-child {
+  background-color: #007bff;
+  color: white;
+}
+
+.button-group button:last-child:hover {
+  background-color: #0069d9;
+}
+
+.button-group button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* 消息提示 */
+.message {
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.message.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.message.error {
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 /* 拍卖列表样式 */
@@ -216,6 +289,7 @@ button[type="submit"]:disabled {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 15px;
+  position: relative;
 }
 
 .auction-header {
@@ -252,6 +326,117 @@ button[type="submit"]:disabled {
   margin-bottom: 8px;
 }
 
+/* 拍卖操作按钮 */
+.auction-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.auction-actions button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-bid {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-bid:hover {
+  background-color: #0069d9;
+}
+
+.btn-cancel {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background-color: #c82333;
+}
+
+.btn-end {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.btn-end:hover {
+  background-color: #e0a800;
+}
+
+.auction-actions button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* 出价弹窗 */
+.bid-modal {
+  background-color: #f8f9fa;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.bid-modal h4 {
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.bid-modal input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-actions button:first-child {
+  background-color: #28a745;
+  color: white;
+}
+
+.modal-actions button:first-child:hover {
+  background-color: #218838;
+}
+
+.modal-actions button:last-child {
+  background-color: #6c757d;
+  color: white;
+}
+
+.modal-actions button:last-child:hover {
+  background-color: #5a6268;
+}
+
+.modal-actions button:disabled {
+  background-color: #adb5bd;
+  cursor: not-allowed;
+}
+
 /* 页脚样式 */
 .app-footer {
   margin-top: 40px;
@@ -276,5 +461,13 @@ button[type="submit"]:disabled {
 
   .auction-cards {
     grid-template-columns: 1fr;
+  }
+
+  .auction-actions {
+    flex-direction: column;
+  }
+
+  .button-group {
+    flex-direction: column;
   }
 }

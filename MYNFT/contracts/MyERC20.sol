@@ -2,11 +2,18 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MyERC20 is ERC20, Ownable(msg.sender) {
+contract MyERC20 is ERC20 {
+    address private _owner;
+
     constructor() ERC20("MyToken", "MTK") {
+        _owner = msg.sender;
         _mint(msg.sender, 1000000 * 10 ** decimals());
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == _owner, "Ownable: caller is not the owner");
+        _;
     }
 
     function mint(address to, uint256 amount) public onlyOwner {

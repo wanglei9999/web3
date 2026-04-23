@@ -262,37 +262,38 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
-    function getAuctionDetails(uint256 auctionId) public view returns (
-        uint256,
-        address,
-        address,
-        uint256,
-        uint256,
-        uint256,
-        uint256,
-        address,
-        uint256,
-        bool,
-        address,
-        bool,
-        uint256
-    ) {
+    struct AuctionDetails {
+        uint256 auctionId;
+        address seller;
+        address nftContract;
+        uint256 tokenId;
+        uint256 startingPrice;
+        uint256 startTime;
+        uint256 endTime;
+        address highestBidder;
+        uint256 highestBid;
+        bool isActive;
+        address paymentToken;
+        bool isETH;
+        uint256 usdValue;
+    }
+
+    function getAuctionDetails(uint256 auctionId) public view returns (AuctionDetails memory) {
         Auction storage auction = auctionData[auctionId];
-        uint256 usdValue = auction.highestBid > 0 ? convertToUSD(auction.isETH, auction.highestBid, auction.paymentToken) : 0;
-        return (
-            auction.auctionId,
-            auction.seller,
-            auction.nftContract,
-            auction.tokenId,
-            auction.startingPrice,
-            auction.startTime,
-            auction.endTime,
-            auction.highestBidder,
-            auction.highestBid,
-            auction.isActive,
-            auction.paymentToken,
-            auction.isETH,
-            usdValue
-        );
+        return AuctionDetails({
+            auctionId: auction.auctionId,
+            seller: auction.seller,
+            nftContract: auction.nftContract,
+            tokenId: auction.tokenId,
+            startingPrice: auction.startingPrice,
+            startTime: auction.startTime,
+            endTime: auction.endTime,
+            highestBidder: auction.highestBidder,
+            highestBid: auction.highestBid,
+            isActive: auction.isActive,
+            paymentToken: auction.paymentToken,
+            isETH: auction.isETH,
+            usdValue: auction.highestBid > 0 ? convertToUSD(auction.isETH, auction.highestBid, auction.paymentToken) : 0
+        });
     }
 }

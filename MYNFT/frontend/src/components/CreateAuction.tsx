@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useContractWrite, useWaitForTransaction } from 'wagmi';
 import { ethers } from 'ethers';
-import { auctionHouseAbi, contractAddresses } from '../lib/contracts';
+import { auctionHouseAbi, myNFTAbi, contractAddresses } from '../lib/contracts';
 
 const CreateAuction = () => {
   const [nftContract, setNftContract] = useState(contractAddresses.myNFT);
@@ -14,25 +13,6 @@ const CreateAuction = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { write: createAuction, data: createData } = useContractWrite({
-    address: contractAddresses.auctionHouse,
-    abi: auctionHouseAbi,
-    functionName: 'createAuction',
-    args: [
-      nftContract,
-      tokenId,
-      ethers.utils.parseEther(startingPrice),
-      0, // 立即开始
-      duration,
-      paymentToken,
-      isETH
-    ],
-  });
-
-  const { isLoading: isCreating, isSuccess: isCreateSuccess } = useWaitForTransaction({
-    hash: createData?.hash,
-  });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -40,21 +20,50 @@ const CreateAuction = () => {
     setIsLoading(true);
 
     try {
+      if (!window.ethereum) {
+        throw new Error('请安装MetaMask钱包');
+      }
+
       if (!nftContract || !tokenId || !startingPrice || !duration) {
         throw new Error('请填写所有必填字段');
       }
 
-      createAuction();
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const signerAddress = await signer.getAddress();
+
+      const nftContractInstance = new ethers.Contract(nftContract, myNFTAbi, signer);
+      const auctionHouseContract = new ethers.Contract(contractAddresses.auctionHouse, auctionHouseAbi, signer);
+
+      const owner = await nftContractInstance.ownerOf(tokenId);
+      if (owner.toLowerCase() !== signerAddress.toLowerCase()) {
+        throw new Error('您不是该NFT的所有者');
+      }
+
+      const isApproved = await nftContractInstance.isApprovedForAll(signerAddress, contractAddresses.auctionHouse);
+      if (!isApproved) {
+        const approveTx = await nftContractInstance.setApprovalForAll(contractAddresses.auctionHouse, true);
+        await approveTx.wait();
+      }
+
+      const tx = await auctionHouseContract.createAuction(
+        nftContract,
+        tokenId,
+        ethers.utils.parseEther(startingPrice),
+        0,
+        duration,
+        paymentToken,
+        isETH
+      );
+      await tx.wait();
+
+      setSuccess('拍卖创建成功！');
     } catch (err) {
       setError((err as Error).message);
+    } finally {
       setIsLoading(false);
     }
   };
-
-  if (isCreateSuccess) {
-    setSuccess('拍卖创建成功！');
-    setIsLoading(false);
-  }
 
   return (
     <div className="create-auction">
@@ -136,8 +145,8 @@ const CreateAuction = () => {
         )}
         {error && <p className="error">{error}</p>}
         {success && <p className="success">{success}</p>}
-        <button type="submit" disabled={isLoading || isCreating}>
-          {isLoading || isCreating ? '创建中...' : '创建拍卖'}
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? '创建中...' : '创建拍卖'}
         </button>
       </form>
     </div>
