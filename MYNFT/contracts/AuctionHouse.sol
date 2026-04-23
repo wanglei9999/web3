@@ -78,7 +78,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         __Ownable_init();
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         _reentrancyGuard = false;
-        auctionCounter = 0;
+        auctionCounter = 1;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

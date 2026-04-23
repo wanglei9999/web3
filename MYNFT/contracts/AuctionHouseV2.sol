@@ -80,7 +80,7 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         version = 2;
         _reentrancyGuard = false;
-        auctionCounter = 0;
+        auctionCounter = 1;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
