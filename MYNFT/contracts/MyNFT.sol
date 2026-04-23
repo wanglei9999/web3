@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MyNFT is ERC721, ERC721URIStorage {
-    uint256 private _tokenIdCounter;
+    uint256 private _tokenIdCounter = 1;
     address private _owner;
 
     constructor() ERC721("MyNFT", "MNFT") {

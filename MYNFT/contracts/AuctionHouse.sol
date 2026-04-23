@@ -27,7 +27,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bool isETH;
     }
 
-    uint256 public auctionCounter;
+    uint256 public auctionCounter = 1;
     mapping(address => mapping(uint256 => uint256)) public nftToken2AuctionId;
     mapping(uint256 => Auction) public auctionData;
 
