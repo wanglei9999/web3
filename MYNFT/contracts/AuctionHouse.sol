@@ -139,7 +139,13 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         require(msg.value > 0, "Bid must be positive");
 
         if (auction.highestBid == 0) {
-            require(msg.value > auction.startingPrice, "Bid too low");
+            if (auction.isETH) {
+                require(msg.value > auction.startingPrice, "Bid too low");
+            } else {
+                uint256 bidUsdValue = convertToUSD(true, msg.value, address(0));
+                uint256 minBidUsdValue = convertToUSD(false, auction.startingPrice, auction.paymentToken);
+                require(bidUsdValue > minBidUsdValue, "Bid too low");
+            }
         } else if (auction.highestBidIsETH) {
             require(msg.value > auction.highestBid, "Bid too low");
         } else {
@@ -172,7 +178,15 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         require(amount > 0, "Bid must be positive");
 
         if (auction.highestBid == 0) {
-            require(amount > auction.startingPrice, "Bid too low");
+            if (auction.isETH) {
+                // 拍卖起始价是 ETH，但用户用 ERC20 出价，需要换算
+                uint256 bidUsdValue = convertToUSD(false, amount, auction.paymentToken);
+                uint256 minBidUsdValue = convertToUSD(true, auction.startingPrice, address(0));
+                require(bidUsdValue > minBidUsdValue, "Bid too low");
+            } else {
+                // 同类型，直接比较
+                require(amount > auction.startingPrice, "Bid too low");
+            }
         } else if (!auction.highestBidIsETH) {
             require(amount > auction.highestBid, "Bid too low");
         } else {
