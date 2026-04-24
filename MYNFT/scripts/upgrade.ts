@@ -26,7 +26,7 @@ async function main() {
   const version = await upgraded.getVersion();
   console.log(`合约版本号: ${version}`);
 
-  if (version === 2) {
+  if (Number(version) === 2) {
     console.log("✅ 升级成功！");
   } else {
     console.log("❌ 升级失败！");

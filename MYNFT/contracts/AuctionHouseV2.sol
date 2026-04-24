@@ -4,12 +4,13 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct Auction {
@@ -22,6 +23,7 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 endTime;
         address highestBidder;
         uint256 highestBid;
+        bool highestBidIsETH;
         bool isActive;
         address paymentToken;
         bool isETH;
@@ -35,8 +37,6 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     AggregatorV3Interface public ethUsdPriceFeed;
     mapping(address => AggregatorV3Interface) public tokenUsdPriceFeeds;
-
-    bool private _reentrancyGuard;
 
     event AuctionCreated(
         uint256 indexed auctionId,
@@ -68,18 +68,11 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address indexed seller
     );
 
-    modifier nonReentrant() {
-        require(!_reentrancyGuard, "ReentrancyGuard: reentrant call");
-        _reentrancyGuard = true;
-        _;
-        _reentrancyGuard = false;
-    }
-
     function initialize(address _ethUsdPriceFeed) public initializer {
-         __Ownable_init();
+        __Ownable_init();
+        __ReentrancyGuard_init();
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
-        _reentrancyGuard = false;
-        auctionCounter = 1;
+        auctionCounter = 0;
         version = 1;
     }
 
@@ -132,6 +125,7 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             endTime: endTime,
             highestBidder: address(0),
             highestBid: 0,
+            highestBidIsETH: false,
             isActive: true,
             paymentToken: paymentToken,
             isETH: isETH
@@ -150,18 +144,30 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         require(auction.isActive, "Auction not active");
         require(block.timestamp >= auction.startTime, "Auction not started");
         require(block.timestamp < auction.endTime, "Auction ended");
-        require(auction.isETH, "Auction requires ERC20");
         require(msg.value > 0, "Bid must be positive");
 
-        uint256 minBid = auction.highestBid == 0 ? auction.startingPrice : auction.highestBid;
-        require(msg.value > minBid, "Bid too low");
+        if (auction.highestBid == 0) {
+            require(msg.value > auction.startingPrice, "Bid too low");
+        } else if (auction.highestBidIsETH) {
+            require(msg.value > auction.highestBid, "Bid too low");
+        } else {
+            uint256 bidUsdValue = convertToUSD(true, msg.value, address(0));
+            uint256 minBidUsdValue = convertToUSD(false, auction.highestBid, auction.paymentToken);
+            require(bidUsdValue > minBidUsdValue, "Bid too low");
+        }
 
         if (auction.highestBidder != address(0)) {
-            _safeTransferETH(auction.highestBidder, auction.highestBid);
+            if (auction.highestBidIsETH) {
+                _safeTransferETH(auction.highestBidder, auction.highestBid);
+            } else {
+                IERC20 token = IERC20(auction.paymentToken);
+                token.safeTransfer(auction.highestBidder, auction.highestBid);
+            }
         }
 
         auction.highestBidder = msg.sender;
         auction.highestBid = msg.value;
+        auction.highestBidIsETH = true;
 
         emit BidPlaced(auctionId, msg.sender, msg.value, true);
     }
@@ -171,24 +177,35 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         require(auction.isActive, "Auction not active");
         require(block.timestamp >= auction.startTime, "Auction not started");
         require(block.timestamp < auction.endTime, "Auction ended");
-        require(!auction.isETH, "Auction requires ETH");
         require(amount > 0, "Bid must be positive");
 
-        uint256 minBid = auction.highestBid == 0 ? auction.startingPrice : auction.highestBid;
-        require(amount > minBid, "Bid too low");
+        if (auction.highestBid == 0) {
+            require(amount > auction.startingPrice, "Bid too low");
+        } else if (!auction.highestBidIsETH) {
+            require(amount > auction.highestBid, "Bid too low");
+        } else {
+            uint256 bidUsdValue = convertToUSD(false, amount, auction.paymentToken);
+            uint256 minBidUsdValue = convertToUSD(true, auction.highestBid, address(0));
+            require(bidUsdValue > minBidUsdValue, "Bid too low");
+        }
 
         IERC20 token = IERC20(auction.paymentToken);
         require(token.balanceOf(msg.sender) >= amount, "Insufficient balance");
         require(token.allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
 
         if (auction.highestBidder != address(0)) {
-            token.safeTransfer(auction.highestBidder, auction.highestBid);
+            if (auction.highestBidIsETH) {
+                _safeTransferETH(auction.highestBidder, auction.highestBid);
+            } else {
+                token.safeTransfer(auction.highestBidder, auction.highestBid);
+            }
         }
 
         token.safeTransferFrom(msg.sender, address(this), amount);
 
         auction.highestBidder = msg.sender;
         auction.highestBid = amount;
+        auction.highestBidIsETH = false;
 
         emit BidPlaced(auctionId, msg.sender, amount, false);
     }
@@ -204,7 +221,7 @@ contract AuctionHouseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             IERC721 nft = IERC721(auction.nftContract);
             nft.transferFrom(address(this), auction.highestBidder, auction.tokenId);
 
-            if (auction.isETH) {
+            if (auction.highestBidIsETH) {
                 _safeTransferETH(auction.seller, auction.highestBid);
             } else {
                 IERC20 token = IERC20(auction.paymentToken);
