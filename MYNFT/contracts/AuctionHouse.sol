@@ -54,7 +54,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         uint256 indexed auctionId,
         address indexed bidder,
         uint256 amount,
-        bool isETH
+        address tokenAddress
     );
 
     event AuctionEnded(
@@ -167,7 +167,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         auction.highestBid = msg.value;
         auction.highestBidIsETH = true;
 
-        emit BidPlaced(auctionId, msg.sender, msg.value, true);
+        emit BidPlaced(auctionId, msg.sender, msg.value, address(0));
     }
 
     function bidAuctionERC20(uint256 auctionId, uint256 amount) public nonReentrant {
@@ -213,7 +213,7 @@ contract AuctionHouse is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         auction.highestBid = amount;
         auction.highestBidIsETH = false;
 
-        emit BidPlaced(auctionId, msg.sender, amount, false);
+        emit BidPlaced(auctionId, msg.sender, amount, auction.paymentToken);
     }
 
     function endAuction(uint256 auctionId) public nonReentrant {
